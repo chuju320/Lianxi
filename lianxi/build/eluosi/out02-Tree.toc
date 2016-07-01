@@ -1,0 +1,10 @@
+('E:\\Lianxi\\lianxi\\build\\eluosi\\pyreadline-2.1-py2.7-win-amd64.egg',
+ None,
+ set(['*.py', '*.pyc', '*.pyd', '*.pyo', '*.so', 'EGG-INFO']),
+ 'DATA',
+ [('pyreadline-2.1-py3.4.egg-info',
+   'E:\\Lianxi\\lianxi\\build\\eluosi\\pyreadline-2.1-py2.7-win-amd64.egg\\pyreadline-2.1-py3.4.egg-info',
+   'DATA'),
+  ('pyreadline\\configuration\\pyreadlineconfig.ini',
+   'E:\\Lianxi\\lianxi\\build\\eluosi\\pyreadline-2.1-py2.7-win-amd64.egg\\pyreadline\\configuration\\pyreadlineconfig.ini',
+   'DATA')])

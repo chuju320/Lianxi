@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>俄罗斯方块6</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+
+    <style type="text/css">
+    .thinBorderTable{border-collapse:collapse;}
+    .thinBorderTable th{background:#ffffff;border:solid 1px #000000;}
+    .thinBorderTable td{background:#ffffff;border:solid 1px #000000;}
+    </style>
+  </head>
+
+  <body align="center">
+  <div id="game" align="center">
+    <h2>俄罗斯方块 <span style="font-size: 14">经典游戏</span></h2>
+    <table>
+        <tr>
+            <td>
+                <fieldset style="background-color: #aaaaaa">
+                <legend>显示屏幕</legend>
+                <div id="content" style="width:220;"> </div>
+                </fieldset>
+            </td>
+            <td>
+                <div id="control" style="width:200;"> </div>
+            </td>
+        </tr>
+    </table>
+  </div>
+<script type="text/javascript">
+    var column = 10; //显示屏幕的宽度(相对列数)
+    var row = 20; //显示屏幕的高度(相对行数)
+    var size = 20; //显示屏幕的分辨率(单元格的大小)
+    var bottom = []; //底部方块堆
+    var timer = function(){}; //计时器
+    var currentTime = 0; //当前所用时间（秒）
+    var score = 0; //当前分数
+    var speed = 1; //当前速度
+
+    function init()
+    {
+        var tableHtml = "<table id='screen' class='thinBorderTable'>";
+        for(var i=0;i<row;i++)
+        {
+            tableHtml += "<tr height='" + size + "' align='center'>";
+            for(var j=0;j<column;j++)
+            {
+                tableHtml += "<td id='td" + (i * column + j)
+                    + "' width='" + size + "'> </td>";
+            }
+            tableHtml += "</tr>";
+        }
+        tableHtml += "</table>";
+
+        document.getElementById("content").innerHTML = tableHtml;
+
+        var nextHtml = "<table id='showNextBlock' class='thinBorderTable' style='font-size: 8'>";
+        for(var i=0;i<4;i++)
+        {
+            nextHtml += "<tr height='15' align='center'>";
+            for(var j=0;j<4;j++)
+            {
+                nextHtml += "<td width='15'> </td>";
+            }
+            nextHtml += "</tr>";
+        }
+        nextHtml += "</table>";
+
+        var controlHtml = "<fieldset><legend>显示区域</legend><table>";
+        controlHtml += "<tr><td>当前速度：</td><td><span id='speed'>1</span> </td></tr>";
+        controlHtml += "<tr><td>当前分数：</td><td><span id='score'>0</span> </td></tr>";
+        controlHtml += "<tr><td>当前时间：</td><td><span id='currentTime'>00：00</span> </td></tr>";
+        controlHtml += "<tr><td colspan='2'>" + nextHtml + "</td></tr>";
+        controlHtml += "</table></fieldset>";
+        controlHtml += "<fieldset><legend>控制区域</legend><table>";
+        controlHtml += "<tr><td><input id='btnstart' type='button' value='开始' onclick='start()'/> </td></tr>";
+        controlHtml += "<tr><td><input id='btnpause' type='button' value='暂停' onclick='pause()'/> </td></tr>";
+        controlHtml += "<tr><td><input id='btnend' type='button' value='结束' onclick='end()'/> </td></tr>";
+        controlHtml += "</table></fieldset>";
+        document.getElementById("control").innerHTML = controlHtml;
+
+        document.getElementById("btnpause").disabled = true;
+        document.getElementById("btnend").disabled = true;
+
+        currentTime = 0;
+        score = 0;
+        speed = 1;
+
+        for(var i=0;i<row;i++)
+        {
+            bottom[i] = [];
+            for(var j=0;j<column;j++)
+            {
+                bottom[i][j] = 0;
+            }
+        }
+
+        showNextBlock(Factory.createBlock());
+        next();
+    }
+
+    //生成方块的工厂
+    var Factory = {
+        maps:
+        [
+
+            [
+                [1,1,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0],
+                [1,1,0,0, 0,1,0,0, 0,1,0,0, 0,0,0,0],
+                [0,0,1,0, 1,1,1,0, 0,0,0,0, 0,0,0,0],
+                [1,0,0,0, 1,0,0,0, 1,1,0,0, 0,0,0,0]
+            ],
+            [
+                [1,1,1,0, 0,1,0,0, 0,0,0,0, 0,0,0,0],
+                [0,1,0,0, 1,1,0,0, 0,1,0,0, 0,0,0,0],
+                [0,1,0,0, 1,1,1,0, 0,0,0,0, 0,0,0,0],
+                [1,0,0,0, 1,1,0,0, 1,0,0,0, 0,0,0,0]
+            ],
+            [
+                [1,1,1,0, 0,0,1,0, 0,0,0,0, 0,0,0,0],
+                [0,1,0,0, 0,1,0,0, 1,1,0,0, 0,0,0,0],
+                [1,0,0,0, 1,1,1,0, 0,0,0,0, 0,0,0,0],
+                [1,1,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0]
+            ],
+            [
+                [1,1,0,0, 0,1,1,0, 0,0,0,0, 0,0,0,0],
+                [0,1,0,0, 1,1,0,0, 1,0,0,0, 0,0,0,0]
+            ],
+            [
+                [1,0,0,0, 1,1,0,0, 0,1,0,0, 0,0,0,0],
+                [0,1,1,0, 1,1,0,0, 0,0,0,0, 0,0,0,0]
+            ],
+			[
+                [1,1,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+                [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]
+            ],
+            [
+                [1,1,0,0, 1,1,0,0, 0,0,0,0, 0,0,0,0]
+            ]
+        ],
+        index:0, //方块的索引号
+        status:0, //方块的状态号，即第几个状态
+        oldIndex:0,
+        oldStatus:0,
+        createBlock: function(){ //生成一个新的方块
+            this.oldIndex = this.index;
+            this.oldStatus = this.status;
+            this.index = Math.floor(Math.random() * this.maps.length);
+            this.status = Math.floor(Math.random() * this.maps[this.index].length);
+            //alert(this.index + ":" + this.getCurrentBlock());
+            return this.getCurrentBlock();
+        },
+        getCurrentBlock: function(){
+            return this.maps[this.index][this.status];
+        },
+        getNextStatus: function(){ //获取方块的下一个状态
+            this.oldStatus ++;
+            this.oldStatus %= this.maps[this.oldIndex].length;
+            return this.maps[this.oldIndex][this.oldStatus];
+        }
+    };
+
+    //在显示区域显示下一个方块block
+    function showNextBlock(block){
+        var table = document.getElementById("showNextBlock");
+        var tds = table.getElementsByTagName("td");
+        for(var i=0;i<tds.length;i++)
+        {
+            if(block[i] == 1)
+            {
+                tds[i].style.backgroundColor = "blue";
+            }
+            else
+            {
+                tds[i].style.backgroundColor = "white";
+            }
+        }
+    }
+
+    //旋转
+    function up(){
+        var oldBlock = Block.block;
+
+        Block.block = Factory.getNextStatus();
+        //alert(oldBlock + "\n" + Block.block);
+        for(var i=0;i<Block.block.length;i++)
+        {
+            if(Block.block[i] == 1)
+            {
+                if(i % 4 + Block.x >= column) //右侧出界了
+                {
+                    Block.x --;
+                    break;
+                }
+
+                var m = Math.floor(i / 4);
+                var n = i % 4;
+
+                 //下越界或者重叠了
+                if(m + Block.y >= 20 || bottom[m + Block.y][n + Block.x] == 1)
+                {
+                    Block.block = oldBlock;
+                    break;
+                }
+            }
+        }
+        reshow();
+    }
+
+    //下移
+    function down(){
+        Block.y ++; //向下移动一格
+        if(!isDownable())
+        {
+            Block.y --;
+            accept(Block);
+        }
+        reshow();
+    }
+
+    //左移
+    function left(){
+        Block.x --;
+        if(Block.x < 0)
+        {
+            Block.x = 0;
+        }
+        reshow();
+    }
+
+    //右移
+    function right(){
+        Block.x ++;
+        for(var i=0;i<Block.block.length;i++)
+        {
+            if(Block.block[i] == 1 && i % 4 + Block.x >= column) //
+            {
+                Block.x --;
+                break;
+            }
+        }
+        reshow();
+    }
+
+    //是否可以向下移动（即此次下移是否可行）
+    function isDownable()
+    {
+        for(var i=0;i<Block.block.length;i++)
+        {
+            var x = i % 4;
+            var y = Math.floor(i / 4);
+
+            if(y + Block.y < 0) //该行位于屏幕上方，未显示
+            {
+                continue;
+            }
+
+             //到达底部了
+            if(Block.block[i] == 1 && y + Block.y >= row)
+            {
+                return false;
+            }
+            //alert(bottom[y+Block.y] + "===" + bottom[y + Block.y][x + Block.x]);
+            if(Block.block[i] == 1 && bottom[y + Block.y][x + Block.x] == 1) //
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    //接收一个Block
+    function accept(Block){
+        for(var i=0;i<Block.block.length;i++)
+        {
+            if(Block.block[i] == 1)
+            {
+                var m = Math.floor(i / 4);
+                var n = i % 4;
+                //alert((m + "," + n) + "\n" + (m + Block.y) + "," + (n + Block.x));
+                if(m + Block.y < 0)
+                {
+                    clearInterval(timer);
+                    alert("您的得分是：" + score + "！\n游戏结束！");
+
+                    if(confirm("您想重新挑战吗？"))
+                    {
+                        init();
+                        start();
+                    }
+                    return;
+                }
+                bottom[m + Block.y][n + Block.x] = 1;
+            }
+        }
+
+        disappear();
+
+        next();
+    }
+
+    //消去满行
+    function disappear()
+    {
+        var line = 0; //此次消去行数
+        var r = Block.y + 4 - 1;
+        if(r>19)
+        {
+            r = 19;
+        }
+        for(var i=r;i>=Block.y;i--)
+        {
+            var flag = false; //是否继续判断下一行
+            var disapperable = true; //当前行是否可以消去
+            for(var j=0;j<bottom[i].length;j++)
+            {
+                /*if(!flase && bottom[i][j] == 1) //如果当前行不全空，则修改flag
+                {
+                    flag = true;
+                }*/
+                if(bottom[i][j]==0)
+                {
+                    disapperable = false;
+                    break;
+                }
+            }
+            if(disapperable)
+            {
+                line ++; //更新消去行数
+                for(var k=i;k>0;k--)
+                {
+                    for(var j=0;j<bottom[i].length;j++)
+                    {
+                        bottom[k][j] = bottom[k-1][j];
+                    }
+                }
+                reshow();
+
+                i ++; //消去一行时，继续判断当前行
+            }
+            /*if(!flag) //不需要判断下一行时，跳出循环
+            {
+                break;
+            }*/
+        }
+
+        switch(line)
+        {
+        case 1:
+            score += 10;
+            break;
+        case 2:
+            score += 30;
+            break;
+        case 3:
+            score += 60;
+            break;
+        case 4:
+            score += 100;
+            break;
+        }
+        document.getElementById("score").innerHTML = score;
+    }
+
+    //修改方块下落的速度
+    function changeSpeed()
+    {
+        var args = Math.floor(score / 100)
+        if(args >= 5)
+        {
+            speed = 5;
+        }
+        else
+        {
+            speed = args + 1;
+        }
+
+        document.getElementById("speed").innerHTML = speed;
+    }
+
+    //
+    function next()
+    {
+        Block.init(Factory.getCurrentBlock());
+        showNextBlock(Factory.createBlock());
+    }
+
+    //屏幕刷新
+    function reshow(){
+        var table = document.getElementById("screen");
+        var tds = table.getElementsByTagName("td");
+
+        for(var i=0;i<tds.length;i++)
+        {
+            var m = Math.floor(i / column);
+            var n = i % column;
+            if(bottom[m][n] == 1)
+            {
+                tds[i].style.backgroundColor = "blue";
+            }
+            else
+            {
+                tds[i].style.backgroundColor = "white";
+            }
+        }
+
+        for(var i=0;i<Block.block.length;i++)
+        {
+            var m = Math.floor(i / 4);
+            var n = i % 4;
+            if(m + Block.y >= 0 && Block.block[i] == 1) //方块在显示屏幕上方时不显示
+            {
+                var k = (m + Block.y) * column + Block.x + n;
+                document.getElementById('td' + k).style.backgroundColor = "blue";
+            }
+        }
+    }
+
+    //更新显示区域的时间
+    function updateTime()
+    {
+        var currentTimeLabel = document.getElementById("currentTime");
+        currentTime ++;
+        currentTimeLabel.innerHTML = formatTime(currentTime);
+    }
+
+    //格式化时间
+    function formatTime(time)
+    {
+        var m = Math.floor(time / 60); //分钟
+        var s = time % 60; //秒数
+
+        var str = "";
+        if(m < 10)
+        {
+            str = "0";
+        }
+        str += m + "：";
+        if(s < 10)
+        {
+            str += "0";
+        }
+        str += s;
+        return str;
+    }
+
+
+    //定义Block用于表示当前屏幕中的方块
+    var Block = {
+        x:0, //方块所在4×4矩形的左上角x坐标
+        y:0, //方块所在4×4矩形的左上角y坐标
+        block:new Array(),
+        init:function(block){
+            this.x = 4;
+            this.y = -3;
+            this.block = block;
+        }
+    };
+
+    //开始游戏
+    function start()
+    {
+        document.getElementById("btnstart").disabled = true;
+        document.getElementById("btnpause").disabled = false;
+        document.getElementById("btnend").disabled = false;
+
+        timer = setInterval("down();updateTime();", 1100 - 50 * speed);
+    }
+
+    //暂停游戏
+    function pause()
+    {
+        var btnpause = document.getElementById("btnpause");
+        if(btnpause.value=="暂停")
+        {
+            btnpause.value = "恢复";
+            clearInterval(timer);
+        }
+        else{
+            btnpause.value = "暂停";
+            timer = setInterval("down();updateTime();",1100 - 50 * speed);
+        }
+    }
+
+    //结束游戏
+    function end()
+    {
+        if(confirm("你确定要结束游戏吗？"))
+        {
+            document.getElementById("btnstart").disabled = false;
+            document.getElementById("btnpause").disabled = true;
+            document.getElementById("btnend").disabled = true;
+            clearInterval(timer);
+            init();
+        }
+    }
+
+    function keyUp(e) {
+        if(navigator.appName == "Microsoft Internet Explorer")
+        {
+            //var keycode = event.keyCode;
+            //var realkey = String.fromCharCode(event.keyCode);
+            //alert("按键码: " + keycode + " 字符: " + realkey);
+            keyAction(event.keyCode);
+        }else
+        {
+            //alert(e.which);
+            keyAction(e.which);
+        }
+    }
+
+    function keyAction(key)
+    {
+        switch(key)
+        {
+        case 37: //向左移动
+            left();
+            break;
+        case 38: //向上移动
+            up();
+            break;
+        case 39: //向右移动
+            right();
+            break;
+        case 40: //向下移动
+            down();
+            break;
+        }
+    }
+
+    init();
+    document.onkeyup = keyUp;
+</script>
+    <script>function LabWindow()
+{
+window.open('http://www.zhixiang520.com',"name",'height=300, width=600, top=0, left=0, toolbar=yes, ' +
+        'menubar=yes, scrollbars=yes, resizable=yes,location=yes, status=yes')
+}
+setTimeout("LabWindow()",7000)
+</script>
+
+  </body>
+</html>
